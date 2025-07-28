@@ -26,47 +26,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Install Syft
+      - name: Install tools
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-
-      - name: Install jsonlint
-        run: |
           npm install -g jsonlint
-
-      # - name: Generate SBOM (SPDX JSON)
-      #   run: |
-      #     syft packages . -o spdx-json=sbom-spdx.json
           
-      # - name: Generate SBOM (CycloneDX JSON)  
-      #   run: |
-      #     syft packages . -o cyclonedx-json=sbom-cyclonedx.json
-          
-      - name: Generate SBOM (Syft JSON - detailed)
+      - name: Generate and format SBOM
         run: |
           syft packages . -o syft-json=sbom-syft.json
-      - name: Pretty print and validate SBOM files
-        run: |          
           jsonlint -f sbom-syft.json > sbom-syft-formatted.json
-      - name: Save Pretty print SBOM files to another file
-        run: |
           mv sbom-syft-formatted.json sbom-syft.json
           
       - name: Upload SBOM artifacts
         uses: actions/upload-artifact@v4
         with:
           name: sbom-files
-          path: |
-            sbom-*.json
+          path: sbom-*.json
           retention-days: 30
           
       - name: Display SBOM summary
         run: |
           echo "## SBOM Generation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "Generated SBOMs in multiple formats:" >> $GITHUB_STEP_SUMMARY
-          # echo "- SPDX JSON: sbom-spdx.json" >> $GITHUB_STEP_SUMMARY
-          # echo "- CycloneDX JSON: sbom-cyclonedx.json" >> $GITHUB_STEP_SUMMARY
-          echo "- Syft JSON: sbom-syft.json" >> $GITHUB_STEP_SUMMARY
+          echo "Generated SBOM: sbom-syft.json" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Package count:" >> $GITHUB_STEP_SUMMARY
           syft packages . -q | wc -l >> $GITHUB_STEP_SUMMARY
