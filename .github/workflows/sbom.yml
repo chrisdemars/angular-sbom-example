@@ -20,22 +20,32 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '19'
+          node-version: '20'  # Use LTS version
           cache: 'npm'
           
       - name: Install dependencies
         run: npm ci
         
-      - name: Install tools
+      - name: Install Syft
         run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-          npm install -g jsonlint
+          # Install to a local directory that doesn't require sudo
+          mkdir -p ~/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ~/bin
+          echo "$HOME/bin" >> $GITHUB_PATH
           
-      - name: Generate and format SBOM
+      - name: Generate SBOM
         run: |
           syft packages . -o syft-json=sbom-syft.json
-          jsonlint -f sbom-syft.json > sbom-syft-formatted.json
-          mv sbom-syft-formatted.json sbom-syft.json
+          
+      - name: Validate and format SBOM (optional)
+        run: |
+          # Optional: validate JSON structure
+          if command -v jq &> /dev/null; then
+            jq . sbom-syft.json > sbom-syft-formatted.json
+            mv sbom-syft-formatted.json sbom-syft.json
+          else
+            echo "jq not available, skipping formatting"
+          fi
           
       - name: Upload SBOM artifacts
         uses: actions/upload-artifact@v4
@@ -50,4 +60,5 @@ jobs:
           echo "Generated SBOM: sbom-syft.json" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Package count:" >> $GITHUB_STEP_SUMMARY
-          syft packages . -q | wc -l >> $GITHUB_STEP_SUMMARY
+          # Use syft to count packages more reliably
+          syft packages . -o table | grep -v "^NAME" | grep -v "^$" | wc -l >> $GITHUB_STEP_SUMMARY || echo "Could not count packages" >> $GITHUB_STEP_SUMMARY
