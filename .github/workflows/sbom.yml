@@ -46,9 +46,7 @@ jobs:
         run: |
           syft packages . -o syft-json=sbom-syft.json
       - name: Pretty print and validate SBOM files
-        run: |
-          echo "Formatting and validating SBOM files..."
-          
+        run: |          
           jsonlint -f sbom-syft.json > sbom-syft-formatted.json
           mv sbom-syft-formatted.json sbom-syft.json
           
