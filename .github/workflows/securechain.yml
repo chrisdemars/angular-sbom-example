@@ -1,0 +1,27 @@
+name: securechain
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  securechain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci              # the install step of your project
+      - name: Scan the branch
+        if: github.event_name == 'push'
+        uses: TuxCare/securechain-action@v0
+        with:
+          command: sca
+          args: --fail-on high
+          portal-token: ${{ secrets.SECURECHAIN_PORTAL_TOKEN }}
+          registry-login: none
+      - name: Fail on new findings
+        if: github.event_name == 'pull_request'
+        uses: TuxCare/securechain-action@v0
+        with:
+          command: compare
+          args: --base ${{ github.base_ref }} --fail-on-new
+          portal-token: ${{ secrets.SECURECHAIN_PORTAL_TOKEN }}
+          registry-login: none
